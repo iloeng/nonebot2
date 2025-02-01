@@ -8,12 +8,15 @@ NoneBot 使用 [`loguru`][loguru] 来记录日志信息。
 [loguru]: https://github.com/Delgan/loguru
 
 FrontMatter:
+    mdx:
+        format: md
     sidebar_position: 7
     description: nonebot.log 模块
 """
 
-import sys
+import inspect
 import logging
+import sys
 from typing import TYPE_CHECKING
 
 import loguru
@@ -45,6 +48,7 @@ logger: "Logger" = loguru.logger
 # logger.addHandler(default_handler)
 
 
+# https://loguru.readthedocs.io/en/stable/overview.html#entirely-compatible-with-standard-logging
 class LoguruHandler(logging.Handler):  # pragma: no cover
     """logging 与 loguru 之间的桥梁，将 logging 的日志转发到 loguru。"""
 
@@ -54,8 +58,8 @@ class LoguruHandler(logging.Handler):  # pragma: no cover
         except ValueError:
             level = record.levelno
 
-        frame, depth = sys._getframe(6), 6
-        while frame and frame.f_code.co_filename == logging.__file__:
+        frame, depth = inspect.currentframe(), 0
+        while frame and (depth == 0 or frame.f_code.co_filename == logging.__file__):
             frame = frame.f_back
             depth += 1
 

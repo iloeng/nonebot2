@@ -1,6 +1,8 @@
 """本模块包含了 NoneBot 事件处理过程中使用到的常量。
 
 FrontMatter:
+    mdx:
+        format: md
     sidebar_position: 9
     description: nonebot.consts 模块
 """
@@ -20,6 +22,10 @@ REJECT_TARGET: Literal["_current_target"] = "_current_target"
 """当前 `reject` 目标存储 key"""
 REJECT_CACHE_TARGET: Literal["_next_target"] = "_next_target"
 """下一个 `reject` 目标存储 key"""
+PAUSE_PROMPT_RESULT_KEY: Literal["_pause_result"] = "_pause_result"
+"""`pause` prompt 发送结果存储 key"""
+REJECT_PROMPT_RESULT_KEY: Literal["_reject_{key}_result"] = "_reject_{key}_result"
+"""`reject` prompt 发送结果存储 key"""
 
 # used by Rule
 PREFIX_KEY: Literal["_prefix"] = "_prefix"

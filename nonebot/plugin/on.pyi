@@ -1,25 +1,27 @@
+from datetime import datetime, timedelta
 import re
 from types import ModuleType
-from datetime import datetime, timedelta
+from typing import Any
 
 from nonebot.adapters import Event
-from nonebot.matcher import Matcher
-from nonebot.permission import Permission
 from nonebot.dependencies import Dependent
-from nonebot.rule import Rule, ArgumentParser
-from nonebot.typing import T_State, T_Handler, T_RuleChecker, T_PermissionChecker
+from nonebot.matcher import Matcher, MatcherSource
+from nonebot.permission import Permission
+from nonebot.rule import ArgumentParser, Rule
+from nonebot.typing import T_Handler, T_PermissionChecker, T_RuleChecker, T_State
 
-from .plugin import Plugin
+from .model import Plugin
 
 def store_matcher(matcher: type[Matcher]) -> None: ...
 def get_matcher_plugin(depth: int = ...) -> Plugin | None: ...
 def get_matcher_module(depth: int = ...) -> ModuleType | None: ...
+def get_matcher_source(depth: int = ...) -> MatcherSource | None: ...
 def on(
     type: str = "",
     rule: Rule | T_RuleChecker | None = ...,
     permission: Permission | T_PermissionChecker | None = ...,
     *,
-    handlers: list[T_Handler | Dependent] | None = ...,
+    handlers: list[T_Handler | Dependent[Any]] | None = ...,
     temp: bool = ...,
     expire_time: datetime | timedelta | None = ...,
     priority: int = ...,
@@ -30,7 +32,7 @@ def on_metaevent(
     rule: Rule | T_RuleChecker | None = ...,
     permission: Permission | T_PermissionChecker | None = ...,
     *,
-    handlers: list[T_Handler | Dependent] | None = ...,
+    handlers: list[T_Handler | Dependent[Any]] | None = ...,
     temp: bool = ...,
     expire_time: datetime | timedelta | None = ...,
     priority: int = ...,
@@ -41,7 +43,7 @@ def on_message(
     rule: Rule | T_RuleChecker | None = ...,
     permission: Permission | T_PermissionChecker | None = ...,
     *,
-    handlers: list[T_Handler | Dependent] | None = ...,
+    handlers: list[T_Handler | Dependent[Any]] | None = ...,
     temp: bool = ...,
     expire_time: datetime | timedelta | None = ...,
     priority: int = ...,
@@ -52,7 +54,7 @@ def on_notice(
     rule: Rule | T_RuleChecker | None = ...,
     permission: Permission | T_PermissionChecker | None = ...,
     *,
-    handlers: list[T_Handler | Dependent] | None = ...,
+    handlers: list[T_Handler | Dependent[Any]] | None = ...,
     temp: bool = ...,
     expire_time: datetime | timedelta | None = ...,
     priority: int = ...,
@@ -63,7 +65,7 @@ def on_request(
     rule: Rule | T_RuleChecker | None = ...,
     permission: Permission | T_PermissionChecker | None = ...,
     *,
-    handlers: list[T_Handler | Dependent] | None = ...,
+    handlers: list[T_Handler | Dependent[Any]] | None = ...,
     temp: bool = ...,
     expire_time: datetime | timedelta | None = ...,
     priority: int = ...,
@@ -76,7 +78,7 @@ def on_startswith(
     ignorecase: bool = ...,
     *,
     permission: Permission | T_PermissionChecker | None = ...,
-    handlers: list[T_Handler | Dependent] | None = ...,
+    handlers: list[T_Handler | Dependent[Any]] | None = ...,
     temp: bool = ...,
     expire_time: datetime | timedelta | None = ...,
     priority: int = ...,
@@ -89,7 +91,7 @@ def on_endswith(
     ignorecase: bool = ...,
     *,
     permission: Permission | T_PermissionChecker | None = ...,
-    handlers: list[T_Handler | Dependent] | None = ...,
+    handlers: list[T_Handler | Dependent[Any]] | None = ...,
     temp: bool = ...,
     expire_time: datetime | timedelta | None = ...,
     priority: int = ...,
@@ -102,7 +104,7 @@ def on_fullmatch(
     ignorecase: bool = ...,
     *,
     permission: Permission | T_PermissionChecker | None = ...,
-    handlers: list[T_Handler | Dependent] | None = ...,
+    handlers: list[T_Handler | Dependent[Any]] | None = ...,
     temp: bool = ...,
     expire_time: datetime | timedelta | None = ...,
     priority: int = ...,
@@ -114,7 +116,7 @@ def on_keyword(
     rule: Rule | T_RuleChecker | None = ...,
     *,
     permission: Permission | T_PermissionChecker | None = ...,
-    handlers: list[T_Handler | Dependent] | None = ...,
+    handlers: list[T_Handler | Dependent[Any]] | None = ...,
     temp: bool = ...,
     expire_time: datetime | timedelta | None = ...,
     priority: int = ...,
@@ -128,7 +130,7 @@ def on_command(
     force_whitespace: str | bool | None = ...,
     *,
     permission: Permission | T_PermissionChecker | None = ...,
-    handlers: list[T_Handler | Dependent] | None = ...,
+    handlers: list[T_Handler | Dependent[Any]] | None = ...,
     temp: bool = ...,
     expire_time: datetime | timedelta | None = ...,
     priority: int = ...,
@@ -142,7 +144,7 @@ def on_shell_command(
     parser: ArgumentParser | None = ...,
     *,
     permission: Permission | T_PermissionChecker | None = ...,
-    handlers: list[T_Handler | Dependent] | None = ...,
+    handlers: list[T_Handler | Dependent[Any]] | None = ...,
     temp: bool = ...,
     expire_time: datetime | timedelta | None = ...,
     priority: int = ...,
@@ -155,7 +157,7 @@ def on_regex(
     rule: Rule | T_RuleChecker | None = ...,
     *,
     permission: Permission | T_PermissionChecker | None = ...,
-    handlers: list[T_Handler | Dependent] | None = ...,
+    handlers: list[T_Handler | Dependent[Any]] | None = ...,
     temp: bool = ...,
     expire_time: datetime | timedelta | None = ...,
     priority: int = ...,
@@ -167,7 +169,7 @@ def on_type(
     rule: Rule | T_RuleChecker | None = ...,
     *,
     permission: Permission | T_PermissionChecker | None = ...,
-    handlers: list[T_Handler | Dependent] | None = ...,
+    handlers: list[T_Handler | Dependent[Any]] | None = ...,
     temp: bool = ...,
     expire_time: datetime | timedelta | None = ...,
     priority: int = ...,
@@ -177,10 +179,10 @@ def on_type(
 
 class _Group:
     matchers: list[type[Matcher]] = ...
-    base_kwargs: dict[str, ...] = ...
+    base_kwargs: dict[str, Any] = ...
     def _get_final_kwargs(
-        self, update: dict[str, ...], *, exclude: set[str, ...] | None = None
-    ) -> dict[str, ...]: ...
+        self, update: dict[str, Any], *, exclude: set[str] | None = None
+    ) -> dict[str, Any]: ...
 
 class CommandGroup(_Group):
     basecmd: tuple[str, ...] = ...
@@ -192,7 +194,7 @@ class CommandGroup(_Group):
         *,
         rule: Rule | T_RuleChecker | None = ...,
         permission: Permission | T_PermissionChecker | None = ...,
-        handlers: list[T_Handler | Dependent] | None = ...,
+        handlers: list[T_Handler | Dependent[Any]] | None = ...,
         temp: bool = ...,
         expire_time: datetime | timedelta | None = ...,
         priority: int = ...,
@@ -207,7 +209,7 @@ class CommandGroup(_Group):
         aliases: set[str | tuple[str, ...]] | None = ...,
         force_whitespace: str | bool | None = ...,
         permission: Permission | T_PermissionChecker | None = ...,
-        handlers: list[T_Handler | Dependent] | None = ...,
+        handlers: list[T_Handler | Dependent[Any]] | None = ...,
         temp: bool = ...,
         expire_time: datetime | timedelta | None = ...,
         priority: int = ...,
@@ -222,7 +224,7 @@ class CommandGroup(_Group):
         aliases: set[str | tuple[str, ...]] | None = ...,
         parser: ArgumentParser | None = ...,
         permission: Permission | T_PermissionChecker | None = ...,
-        handlers: list[T_Handler | Dependent] | None = ...,
+        handlers: list[T_Handler | Dependent[Any]] | None = ...,
         temp: bool = ...,
         expire_time: datetime | timedelta | None = ...,
         priority: int = ...,
@@ -237,7 +239,7 @@ class MatcherGroup(_Group):
         type: str = ...,
         rule: Rule | T_RuleChecker | None = ...,
         permission: Permission | T_PermissionChecker | None = ...,
-        handlers: list[T_Handler | Dependent] | None = ...,
+        handlers: list[T_Handler | Dependent[Any]] | None = ...,
         temp: bool = ...,
         expire_time: datetime | timedelta | None = ...,
         priority: int = ...,
@@ -250,7 +252,7 @@ class MatcherGroup(_Group):
         type: str = ...,
         rule: Rule | T_RuleChecker | None = ...,
         permission: Permission | T_PermissionChecker | None = ...,
-        handlers: list[T_Handler | Dependent] | None = ...,
+        handlers: list[T_Handler | Dependent[Any]] | None = ...,
         temp: bool = ...,
         expire_time: datetime | timedelta | None = ...,
         priority: int = ...,
@@ -262,7 +264,7 @@ class MatcherGroup(_Group):
         *,
         rule: Rule | T_RuleChecker | None = ...,
         permission: Permission | T_PermissionChecker | None = ...,
-        handlers: list[T_Handler | Dependent] | None = ...,
+        handlers: list[T_Handler | Dependent[Any]] | None = ...,
         temp: bool = ...,
         expire_time: datetime | timedelta | None = ...,
         priority: int = ...,
@@ -274,7 +276,7 @@ class MatcherGroup(_Group):
         *,
         rule: Rule | T_RuleChecker | None = ...,
         permission: Permission | T_PermissionChecker | None = ...,
-        handlers: list[T_Handler | Dependent] | None = ...,
+        handlers: list[T_Handler | Dependent[Any]] | None = ...,
         temp: bool = ...,
         expire_time: datetime | timedelta | None = ...,
         priority: int = ...,
@@ -286,7 +288,7 @@ class MatcherGroup(_Group):
         *,
         rule: Rule | T_RuleChecker | None = ...,
         permission: Permission | T_PermissionChecker | None = ...,
-        handlers: list[T_Handler | Dependent] | None = ...,
+        handlers: list[T_Handler | Dependent[Any]] | None = ...,
         temp: bool = ...,
         expire_time: datetime | timedelta | None = ...,
         priority: int = ...,
@@ -298,7 +300,7 @@ class MatcherGroup(_Group):
         *,
         rule: Rule | T_RuleChecker | None = ...,
         permission: Permission | T_PermissionChecker | None = ...,
-        handlers: list[T_Handler | Dependent] | None = ...,
+        handlers: list[T_Handler | Dependent[Any]] | None = ...,
         temp: bool = ...,
         expire_time: datetime | timedelta | None = ...,
         priority: int = ...,
@@ -312,7 +314,7 @@ class MatcherGroup(_Group):
         ignorecase: bool = ...,
         rule: Rule | T_RuleChecker | None = ...,
         permission: Permission | T_PermissionChecker | None = ...,
-        handlers: list[T_Handler | Dependent] | None = ...,
+        handlers: list[T_Handler | Dependent[Any]] | None = ...,
         temp: bool = ...,
         expire_time: datetime | timedelta | None = ...,
         priority: int = ...,
@@ -326,7 +328,7 @@ class MatcherGroup(_Group):
         ignorecase: bool = ...,
         rule: Rule | T_RuleChecker | None = ...,
         permission: Permission | T_PermissionChecker | None = ...,
-        handlers: list[T_Handler | Dependent] | None = ...,
+        handlers: list[T_Handler | Dependent[Any]] | None = ...,
         temp: bool = ...,
         expire_time: datetime | timedelta | None = ...,
         priority: int = ...,
@@ -340,7 +342,7 @@ class MatcherGroup(_Group):
         ignorecase: bool = ...,
         rule: Rule | T_RuleChecker | None = ...,
         permission: Permission | T_PermissionChecker | None = ...,
-        handlers: list[T_Handler | Dependent] | None = ...,
+        handlers: list[T_Handler | Dependent[Any]] | None = ...,
         temp: bool = ...,
         expire_time: datetime | timedelta | None = ...,
         priority: int = ...,
@@ -353,7 +355,7 @@ class MatcherGroup(_Group):
         *,
         rule: Rule | T_RuleChecker | None = ...,
         permission: Permission | T_PermissionChecker | None = ...,
-        handlers: list[T_Handler | Dependent] | None = ...,
+        handlers: list[T_Handler | Dependent[Any]] | None = ...,
         temp: bool = ...,
         expire_time: datetime | timedelta | None = ...,
         priority: int = ...,
@@ -368,7 +370,7 @@ class MatcherGroup(_Group):
         *,
         rule: Rule | T_RuleChecker | None = ...,
         permission: Permission | T_PermissionChecker | None = ...,
-        handlers: list[T_Handler | Dependent] | None = ...,
+        handlers: list[T_Handler | Dependent[Any]] | None = ...,
         temp: bool = ...,
         expire_time: datetime | timedelta | None = ...,
         priority: int = ...,
@@ -383,7 +385,7 @@ class MatcherGroup(_Group):
         *,
         rule: Rule | T_RuleChecker | None = ...,
         permission: Permission | T_PermissionChecker | None = ...,
-        handlers: list[T_Handler | Dependent] | None = ...,
+        handlers: list[T_Handler | Dependent[Any]] | None = ...,
         temp: bool = ...,
         expire_time: datetime | timedelta | None = ...,
         priority: int = ...,
@@ -397,7 +399,7 @@ class MatcherGroup(_Group):
         *,
         rule: Rule | T_RuleChecker | None = ...,
         permission: Permission | T_PermissionChecker | None = ...,
-        handlers: list[T_Handler | Dependent] | None = ...,
+        handlers: list[T_Handler | Dependent[Any]] | None = ...,
         temp: bool = ...,
         expire_time: datetime | timedelta | None = ...,
         priority: int = ...,
@@ -410,7 +412,7 @@ class MatcherGroup(_Group):
         *,
         rule: Rule | T_RuleChecker | None = ...,
         permission: Permission | T_PermissionChecker | None = ...,
-        handlers: list[T_Handler | Dependent] | None = ...,
+        handlers: list[T_Handler | Dependent[Any]] | None = ...,
         temp: bool = ...,
         expire_time: datetime | timedelta | None = ...,
         priority: int = ...,

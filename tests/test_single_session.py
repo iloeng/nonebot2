@@ -5,9 +5,9 @@ import pytest
 from utils import make_fake_event
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_matcher_mutex():
-    from nonebot.plugins.single_session import matcher_mutex, _running_matcher
+    from nonebot.plugins.single_session import _running_matcher, matcher_mutex
 
     am = asynccontextmanager(matcher_mutex)
     event = make_fake_event()()

@@ -1,55 +1,55 @@
 import re
-import sys
-from typing import Match, Tuple, Union, Optional
+from re import Match
+from typing import Optional, Union
 
-import pytest
 from nonebug import App
+import pytest
 
-from nonebot.typing import T_State
-from nonebot.exception import ParserExit, SkippedException
-from utils import FakeMessage, FakeMessageSegment, make_fake_event
 from nonebot.consts import (
-    CMD_KEY,
-    PREFIX_KEY,
-    SHELL_ARGS,
-    SHELL_ARGV,
     CMD_ARG_KEY,
-    KEYWORD_KEY,
+    CMD_KEY,
+    CMD_WHITESPACE_KEY,
     ENDSWITH_KEY,
     FULLMATCH_KEY,
+    KEYWORD_KEY,
+    PREFIX_KEY,
     REGEX_MATCHED,
+    SHELL_ARGS,
+    SHELL_ARGV,
     STARTSWITH_KEY,
-    CMD_WHITESPACE_KEY,
 )
+from nonebot.exception import ParserExit, SkippedException
 from nonebot.rule import (
     CMD_RESULT,
     TRIE_VALUE,
-    Rule,
-    ToMeRule,
-    TrieRule,
-    Namespace,
-    RegexRule,
-    IsTypeRule,
+    ArgumentParser,
     CommandRule,
     EndswithRule,
-    KeywordsRule,
     FullmatchRule,
-    ArgumentParser,
-    StartswithRule,
+    IsTypeRule,
+    KeywordsRule,
+    Namespace,
+    RegexRule,
+    Rule,
     ShellCommandRule,
-    regex,
-    to_me,
+    StartswithRule,
+    ToMeRule,
+    TrieRule,
     command,
-    is_type,
-    keyword,
     endswith,
     fullmatch,
-    startswith,
+    is_type,
+    keyword,
+    regex,
     shell_command,
+    startswith,
+    to_me,
 )
+from nonebot.typing import T_State
+from utils import FakeMessage, FakeMessageSegment, make_fake_event
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_rule(app: App):
     async def falsy():
         return False
@@ -81,7 +81,7 @@ async def test_rule(app: App):
         assert await Rule(truthy, skipped)(bot, event, {}) is False
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_trie(app: App):
     TrieRule.add_prefix("/fake-prefix", TRIE_VALUE("/", ("fake-prefix",)))
 
@@ -113,10 +113,40 @@ async def test_trie(app: App):
             command_whitespace=" ",
         )
 
+        message = FakeMessageSegment.text("/fake-prefix ") + FakeMessageSegment.text(
+            " some args"
+        )
+        event = make_fake_event(_message=message)()
+        state = {}
+        TrieRule.get_value(bot, event, state)
+        assert state[PREFIX_KEY] == CMD_RESULT(
+            command=("fake-prefix",),
+            raw_command="/fake-prefix",
+            command_arg=FakeMessage("some args"),
+            command_start="/",
+            command_whitespace="  ",
+        )
+
+        message = (
+            FakeMessageSegment.text("/fake-prefix ")
+            + FakeMessageSegment.text("    ")
+            + FakeMessageSegment.text(" some args")
+        )
+        event = make_fake_event(_message=message)()
+        state = {}
+        TrieRule.get_value(bot, event, state)
+        assert state[PREFIX_KEY] == CMD_RESULT(
+            command=("fake-prefix",),
+            raw_command="/fake-prefix",
+            command_arg=FakeMessage("some args"),
+            command_start="/",
+            command_whitespace="      ",
+        )
+
     del TrieRule.prefix["/fake-prefix"]
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 @pytest.mark.parametrize(
     ("msg", "ignorecase", "type", "text", "expected"),
     [
@@ -133,14 +163,14 @@ async def test_trie(app: App):
     ],
 )
 async def test_startswith(
-    msg: Union[str, Tuple[str, ...]],
+    msg: Union[str, tuple[str, ...]],
     ignorecase: bool,
     type: str,
     text: Optional[str],
     expected: bool,
 ):
     test_startswith = startswith(msg, ignorecase)
-    dependent = list(test_startswith.checkers)[0]
+    dependent = next(iter(test_startswith.checkers))
     checker = dependent.call
 
     msg = (msg,) if isinstance(msg, str) else msg
@@ -156,7 +186,7 @@ async def test_startswith(
         assert await dependent(event=event, state=state) == expected
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 @pytest.mark.parametrize(
     ("msg", "ignorecase", "type", "text", "expected"),
     [
@@ -173,14 +203,14 @@ async def test_startswith(
     ],
 )
 async def test_endswith(
-    msg: Union[str, Tuple[str, ...]],
+    msg: Union[str, tuple[str, ...]],
     ignorecase: bool,
     type: str,
     text: Optional[str],
     expected: bool,
 ):
     test_endswith = endswith(msg, ignorecase)
-    dependent = list(test_endswith.checkers)[0]
+    dependent = next(iter(test_endswith.checkers))
     checker = dependent.call
 
     msg = (msg,) if isinstance(msg, str) else msg
@@ -196,7 +226,7 @@ async def test_endswith(
         assert await dependent(event=event, state=state) == expected
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 @pytest.mark.parametrize(
     ("msg", "ignorecase", "type", "text", "expected"),
     [
@@ -213,14 +243,14 @@ async def test_endswith(
     ],
 )
 async def test_fullmatch(
-    msg: Union[str, Tuple[str, ...]],
+    msg: Union[str, tuple[str, ...]],
     ignorecase: bool,
     type: str,
     text: Optional[str],
     expected: bool,
 ):
     test_fullmatch = fullmatch(msg, ignorecase)
-    dependent = list(test_fullmatch.checkers)[0]
+    dependent = next(iter(test_fullmatch.checkers))
     checker = dependent.call
 
     msg = (msg,) if isinstance(msg, str) else msg
@@ -236,7 +266,7 @@ async def test_fullmatch(
         assert await dependent(event=event, state=state) == expected
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 @pytest.mark.parametrize(
     ("kws", "type", "text", "expected"),
     [
@@ -249,13 +279,13 @@ async def test_fullmatch(
     ],
 )
 async def test_keyword(
-    kws: Tuple[str, ...],
+    kws: tuple[str, ...],
     type: str,
     text: Optional[str],
     expected: bool,
 ):
     test_keyword = keyword(*kws)
-    dependent = list(test_keyword.checkers)[0]
+    dependent = next(iter(test_keyword.checkers))
     checker = dependent.call
 
     assert isinstance(checker, KeywordsRule)
@@ -268,7 +298,7 @@ async def test_keyword(
         assert await dependent(event=event, state=state) == expected
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 @pytest.mark.parametrize(
     ("cmds", "force_whitespace", "cmd", "whitespace", "arg_text", "expected"),
     [
@@ -293,15 +323,15 @@ async def test_keyword(
     ],
 )
 async def test_command(
-    cmds: Tuple[Tuple[str, ...]],
+    cmds: tuple[tuple[str, ...]],
     force_whitespace: Optional[Union[str, bool]],
-    cmd: Tuple[str, ...],
+    cmd: tuple[str, ...],
     whitespace: Optional[str],
     arg_text: Optional[str],
     expected: bool,
 ):
     test_command = command(*cmds, force_whitespace=force_whitespace)
-    dependent = list(test_command.checkers)[0]
+    dependent = next(iter(test_command.checkers))
     checker = dependent.call
 
     assert isinstance(checker, CommandRule)
@@ -314,7 +344,7 @@ async def test_command(
     assert await dependent(state=state) == expected
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_shell_command():
     state: T_State
     CMD = ("test",)
@@ -322,7 +352,7 @@ async def test_shell_command():
     MessageSegment = Message.get_segment_class()
 
     test_not_cmd = shell_command(CMD)
-    dependent = list(test_not_cmd.checkers)[0]
+    dependent = next(iter(test_not_cmd.checkers))
     checker = dependent.call
     assert isinstance(checker, ShellCommandRule)
     message = Message()
@@ -331,7 +361,7 @@ async def test_shell_command():
     assert not await dependent(event=event, state=state)
 
     test_no_parser = shell_command(CMD)
-    dependent = list(test_no_parser.checkers)[0]
+    dependent = next(iter(test_no_parser.checkers))
     checker = dependent.call
     assert isinstance(checker, ShellCommandRule)
     message = Message()
@@ -341,11 +371,33 @@ async def test_shell_command():
     assert state[SHELL_ARGV] == []
     assert SHELL_ARGS not in state
 
+    test_lexical_error = shell_command(CMD)
+    dependent = next(iter(test_lexical_error.checkers))
+    checker = dependent.call
+    assert isinstance(checker, ShellCommandRule)
+    message = Message("-a '1")
+    event = make_fake_event(_message=message)()
+    state = {PREFIX_KEY: {CMD_KEY: CMD, CMD_ARG_KEY: message}}
+    assert await dependent(event=event, state=state)
+    assert state[SHELL_ARGV] is None
+
     parser = ArgumentParser("test")
     parser.add_argument("-a", required=True)
 
+    test_lexical_error_with_parser = shell_command(CMD, parser=ArgumentParser("test"))
+    dependent = next(iter(test_lexical_error_with_parser.checkers))
+    checker = dependent.call
+    assert isinstance(checker, ShellCommandRule)
+    message = Message("-a '1")
+    event = make_fake_event(_message=message)()
+    state = {PREFIX_KEY: {CMD_KEY: CMD, CMD_ARG_KEY: message}}
+    assert await dependent(event=event, state=state)
+    assert state[SHELL_ARGV] is None
+    assert isinstance(state[SHELL_ARGS], ParserExit)
+    assert state[SHELL_ARGS].status != 0
+
     test_simple_parser = shell_command(CMD, parser=parser)
-    dependent = list(test_simple_parser.checkers)[0]
+    dependent = next(iter(test_simple_parser.checkers))
     checker = dependent.call
     assert isinstance(checker, ShellCommandRule)
     message = Message("-a 1")
@@ -356,7 +408,7 @@ async def test_shell_command():
     assert state[SHELL_ARGS] == Namespace(a="1")
 
     test_parser_help = shell_command(CMD, parser=parser)
-    dependent = list(test_parser_help.checkers)[0]
+    dependent = next(iter(test_parser_help.checkers))
     checker = dependent.call
     assert isinstance(checker, ShellCommandRule)
     message = Message("-h")
@@ -369,7 +421,7 @@ async def test_shell_command():
     assert state[SHELL_ARGS].message == parser.format_help()
 
     test_parser_error = shell_command(CMD, parser=parser)
-    dependent = list(test_parser_error.checkers)[0]
+    dependent = next(iter(test_parser_error.checkers))
     checker = dependent.call
     assert isinstance(checker, ShellCommandRule)
     message = Message()
@@ -382,7 +434,7 @@ async def test_shell_command():
     assert state[SHELL_ARGS].message.startswith(parser.format_usage() + "test: error:")
 
     test_parser_remain_args = shell_command(CMD, parser=parser)
-    dependent = list(test_parser_remain_args.checkers)[0]
+    dependent = next(iter(test_parser_remain_args.checkers))
     checker = dependent.call
     assert isinstance(checker, ShellCommandRule)
     message = MessageSegment.text("-a 1 2") + MessageSegment.image("test")
@@ -395,7 +447,7 @@ async def test_shell_command():
     assert state[SHELL_ARGS].message.startswith(parser.format_usage() + "test: error:")
 
     test_message_parser = shell_command(CMD, parser=parser)
-    dependent = list(test_message_parser.checkers)[0]
+    dependent = next(iter(test_message_parser.checkers))
     checker = dependent.call
     assert isinstance(checker, ShellCommandRule)
     message = MessageSegment.text("-a") + MessageSegment.image("test")
@@ -405,24 +457,23 @@ async def test_shell_command():
     assert state[SHELL_ARGV] == ["-a", MessageSegment.image("test")]
     assert state[SHELL_ARGS] == Namespace(a=MessageSegment.image("test"))
 
-    if sys.version_info >= (3, 9):
-        parser = ArgumentParser("test", exit_on_error=False)
-        parser.add_argument("-a", required=True)
+    parser = ArgumentParser("test", exit_on_error=False)
+    parser.add_argument("-a", required=True)
 
-        test_not_exit = shell_command(CMD, parser=parser)
-        dependent = list(test_not_exit.checkers)[0]
-        checker = dependent.call
-        assert isinstance(checker, ShellCommandRule)
-        message = Message()
-        event = make_fake_event(_message=message)()
-        state = {PREFIX_KEY: {CMD_KEY: CMD, CMD_ARG_KEY: message}}
-        assert await dependent(event=event, state=state)
-        assert state[SHELL_ARGV] == []
-        assert isinstance(state[SHELL_ARGS], ParserExit)
-        assert state[SHELL_ARGS].status != 0
+    test_not_exit = shell_command(CMD, parser=parser)
+    dependent = next(iter(test_not_exit.checkers))
+    checker = dependent.call
+    assert isinstance(checker, ShellCommandRule)
+    message = Message()
+    event = make_fake_event(_message=message)()
+    state = {PREFIX_KEY: {CMD_KEY: CMD, CMD_ARG_KEY: message}}
+    assert await dependent(event=event, state=state)
+    assert state[SHELL_ARGV] == []
+    assert isinstance(state[SHELL_ARGS], ParserExit)
+    assert state[SHELL_ARGS].status != 0
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 @pytest.mark.parametrize(
     ("pattern", "type", "text", "expected", "matched"),
     [
@@ -446,7 +497,7 @@ async def test_regex(
     matched: Optional[Match[str]],
 ):
     test_regex = regex(pattern)
-    dependent = list(test_regex.checkers)[0]
+    dependent = next(iter(test_regex.checkers))
     checker = dependent.call
 
     assert isinstance(checker, RegexRule)
@@ -465,11 +516,11 @@ async def test_regex(
         assert result.span() == matched.span()
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 @pytest.mark.parametrize("expected", [True, False])
 async def test_to_me(expected: bool):
     test_to_me = to_me()
-    dependent = list(test_to_me.checkers)[0]
+    dependent = next(iter(test_to_me.checkers))
     checker = dependent.call
 
     assert isinstance(checker, ToMeRule)
@@ -478,14 +529,14 @@ async def test_to_me(expected: bool):
     assert await dependent(event=event) == expected
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_is_type():
     Event1 = make_fake_event()
     Event2 = make_fake_event()
     Event3 = make_fake_event()
 
     test_type = is_type(Event1, Event2)
-    dependent = list(test_type.checkers)[0]
+    dependent = next(iter(test_type.checkers))
     checker = dependent.call
 
     assert isinstance(checker, IsTypeRule)

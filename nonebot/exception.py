@@ -25,13 +25,15 @@ NoneBotException
 ```
 
 FrontMatter:
+    mdx:
+        format: md
     sidebar_position: 10
     description: nonebot.exception 模块
 """
 
 from typing import Any, Optional
 
-from pydantic.fields import ModelField
+from nonebot.compat import ModelField
 
 
 class NoneBotException(Exception):

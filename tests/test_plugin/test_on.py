@@ -1,24 +1,23 @@
-from typing import Type, Callable, Optional
+from typing import Callable, Optional
 
 import pytest
 
 import nonebot
 from nonebot.adapters import Event
-from nonebot.typing import T_RuleChecker
 from nonebot.matcher import Matcher, matchers
 from nonebot.rule import (
-    RegexRule,
-    IsTypeRule,
     CommandRule,
     EndswithRule,
-    KeywordsRule,
     FullmatchRule,
-    StartswithRule,
+    IsTypeRule,
+    KeywordsRule,
+    RegexRule,
     ShellCommandRule,
+    StartswithRule,
 )
+from nonebot.typing import T_RuleChecker
 
 
-@pytest.mark.asyncio
 @pytest.mark.parametrize(
     ("matcher_name", "pre_rule_factory", "has_permission"),
     [
@@ -102,20 +101,20 @@ from nonebot.rule import (
         pytest.param("matcher_group_on_type", lambda e: IsTypeRule(e), True),
     ],
 )
-async def test_on(
+def test_on(
     matcher_name: str,
-    pre_rule_factory: Optional[Callable[[Type[Event]], T_RuleChecker]],
+    pre_rule_factory: Optional[Callable[[type[Event]], T_RuleChecker]],
     has_permission: bool,
 ):
     import plugins.plugin.matchers as module
     from plugins.plugin.matchers import (
         TestEvent,
+        expire_time,
+        handler,
+        permission,
+        priority,
         rule,
         state,
-        handler,
-        priority,
-        permission,
-        expire_time,
     )
 
     matcher = getattr(module, matcher_name)
@@ -145,12 +144,12 @@ async def test_on(
     assert matcher.plugin is plugin
     assert matcher in plugin.matcher
     assert matcher.module is module
+    assert matcher.plugin_id == "plugin"
     assert matcher.plugin_name == "plugin"
     assert matcher.module_name == "plugins.plugin.matchers"
 
 
-@pytest.mark.asyncio
-async def test_runtime_on():
+def test_runtime_on():
     import plugins.plugin.matchers as module
     from plugins.plugin.matchers import matcher_on_factory
 
@@ -163,6 +162,7 @@ async def test_runtime_on():
         assert matcher.plugin is plugin
         assert matcher not in plugin.matcher
         assert matcher.module is module
+        assert matcher.plugin_id == "plugin"
         assert matcher.plugin_name == "plugin"
         assert matcher.module_name == "plugins.plugin.matchers"
     finally:

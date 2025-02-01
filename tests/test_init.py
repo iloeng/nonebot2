@@ -1,21 +1,20 @@
-import pytest
 from nonebug import App
+import pytest
 
 import nonebot
-from nonebot.drivers import Driver, ReverseDriver
 from nonebot import (
-    get_app,
-    get_bot,
-    get_asgi,
-    get_bots,
-    get_driver,
     get_adapter,
     get_adapters,
+    get_app,
+    get_asgi,
+    get_bot,
+    get_bots,
+    get_driver,
 )
+from nonebot.drivers import ASGIMixin, Driver, ReverseDriver
 
 
-@pytest.mark.asyncio
-async def test_init():
+def test_init():
     env = nonebot.get_driver().env
     assert env == "test"
 
@@ -35,29 +34,28 @@ async def test_init():
     assert config.not_nested == "some string"
 
 
-@pytest.mark.asyncio
-async def test_get_driver(app: App, monkeypatch: pytest.MonkeyPatch):
+def test_get_driver(monkeypatch: pytest.MonkeyPatch):
     with monkeypatch.context() as m:
         m.setattr(nonebot, "_driver", None)
         with pytest.raises(ValueError, match="initialized"):
             get_driver()
 
 
-@pytest.mark.asyncio
-async def test_get_asgi(app: App, monkeypatch: pytest.MonkeyPatch):
+def test_get_asgi():
     driver = get_driver()
     assert isinstance(driver, ReverseDriver)
+    assert isinstance(driver, ASGIMixin)
     assert get_asgi() == driver.asgi
 
 
-@pytest.mark.asyncio
-async def test_get_app(app: App, monkeypatch: pytest.MonkeyPatch):
+def test_get_app():
     driver = get_driver()
     assert isinstance(driver, ReverseDriver)
+    assert isinstance(driver, ASGIMixin)
     assert get_app() == driver.server_app
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_adapter(app: App, monkeypatch: pytest.MonkeyPatch):
     async with app.test_api() as ctx:
         adapter = ctx.create_adapter()
@@ -72,8 +70,7 @@ async def test_get_adapter(app: App, monkeypatch: pytest.MonkeyPatch):
                 get_adapter("not exist")
 
 
-@pytest.mark.asyncio
-async def test_run(app: App, monkeypatch: pytest.MonkeyPatch):
+def test_run(monkeypatch: pytest.MonkeyPatch):
     runned = False
 
     def mock_run(*args, **kwargs):
@@ -91,8 +88,7 @@ async def test_run(app: App, monkeypatch: pytest.MonkeyPatch):
     assert runned
 
 
-@pytest.mark.asyncio
-async def test_get_bot(app: App, monkeypatch: pytest.MonkeyPatch):
+def test_get_bot(app: App, monkeypatch: pytest.MonkeyPatch):
     driver = get_driver()
 
     with pytest.raises(ValueError, match="no bots"):

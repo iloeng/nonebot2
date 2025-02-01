@@ -5,31 +5,29 @@
 只有当所有 `RuleChecker` 检查结果为 `True` 时继续运行。
 
 FrontMatter:
+    mdx:
+        format: md
     sidebar_position: 5
     description: nonebot.rule 模块
 """
 
+from argparse import Action, ArgumentError
+from argparse import ArgumentParser as ArgParser
+from argparse import Namespace as Namespace
+from collections.abc import Sequence
+from contextvars import ContextVar
+from gettext import gettext
+from itertools import chain, product
 import re
 import shlex
-from argparse import Action
-from gettext import gettext
-from argparse import ArgumentError
-from contextvars import ContextVar
-from itertools import chain, product
-from argparse import Namespace as Namespace
-from argparse import ArgumentParser as ArgParser
 from typing import (
     IO,
     TYPE_CHECKING,
-    List,
-    Type,
-    Tuple,
-    Union,
-    TypeVar,
-    Optional,
-    Sequence,
-    TypedDict,
     NamedTuple,
+    Optional,
+    TypedDict,
+    TypeVar,
+    Union,
     cast,
     overload,
 )
@@ -37,33 +35,33 @@ from typing import (
 from pygtrie import CharTrie
 
 from nonebot import get_driver
-from nonebot.log import logger
-from nonebot.typing import T_State
-from nonebot.exception import ParserExit
-from nonebot.internal.rule import Rule as Rule
 from nonebot.adapters import Bot, Event, Message, MessageSegment
-from nonebot.params import Command, EventToMe, CommandArg, CommandWhitespace
 from nonebot.consts import (
+    CMD_ARG_KEY,
     CMD_KEY,
+    CMD_START_KEY,
+    CMD_WHITESPACE_KEY,
+    ENDSWITH_KEY,
+    FULLMATCH_KEY,
+    KEYWORD_KEY,
     PREFIX_KEY,
+    RAW_CMD_KEY,
+    REGEX_MATCHED,
     SHELL_ARGS,
     SHELL_ARGV,
-    CMD_ARG_KEY,
-    KEYWORD_KEY,
-    RAW_CMD_KEY,
-    ENDSWITH_KEY,
-    CMD_START_KEY,
-    FULLMATCH_KEY,
-    REGEX_MATCHED,
     STARTSWITH_KEY,
-    CMD_WHITESPACE_KEY,
 )
+from nonebot.exception import ParserExit
+from nonebot.internal.rule import Rule as Rule
+from nonebot.log import logger
+from nonebot.params import Command, CommandArg, CommandWhitespace, EventToMe
+from nonebot.typing import T_State
 
 T = TypeVar("T")
 
 
 class CMD_RESULT(TypedDict):
-    command: Optional[Tuple[str, ...]]
+    command: Optional[tuple[str, ...]]
     raw_command: Optional[str]
     command_arg: Optional[Message]
     command_start: Optional[str]
@@ -72,7 +70,7 @@ class CMD_RESULT(TypedDict):
 
 class TRIE_VALUE(NamedTuple):
     command_start: str
-    command: Tuple[str, ...]
+    command: tuple[str, ...]
 
 
 parser_message: ContextVar[str] = ContextVar("parser_message")
@@ -117,6 +115,11 @@ class TrieRule:
                 # check whitespace
                 arg_str = segment_text[len(pf.key) :]
                 arg_str_stripped = arg_str.lstrip()
+                # check next segment until arg detected or no text remain
+                while not arg_str_stripped and msg and msg[0].is_text():
+                    arg_str += str(msg.pop(0))
+                    arg_str_stripped = arg_str.lstrip()
+
                 has_arg = arg_str_stripped or msg
                 if (
                     has_arg
@@ -142,9 +145,9 @@ class StartswithRule:
         ignorecase: 是否忽略大小写
     """
 
-    __slots__ = ("msg", "ignorecase")
+    __slots__ = ("ignorecase", "msg")
 
-    def __init__(self, msg: Tuple[str, ...], ignorecase: bool = False):
+    def __init__(self, msg: tuple[str, ...], ignorecase: bool = False):
         self.msg = msg
         self.ignorecase = ignorecase
 
@@ -176,7 +179,7 @@ class StartswithRule:
         return False
 
 
-def startswith(msg: Union[str, Tuple[str, ...]], ignorecase: bool = False) -> Rule:
+def startswith(msg: Union[str, tuple[str, ...]], ignorecase: bool = False) -> Rule:
     """匹配消息纯文本开头。
 
     参数:
@@ -197,9 +200,9 @@ class EndswithRule:
         ignorecase: 是否忽略大小写
     """
 
-    __slots__ = ("msg", "ignorecase")
+    __slots__ = ("ignorecase", "msg")
 
-    def __init__(self, msg: Tuple[str, ...], ignorecase: bool = False):
+    def __init__(self, msg: tuple[str, ...], ignorecase: bool = False):
         self.msg = msg
         self.ignorecase = ignorecase
 
@@ -231,7 +234,7 @@ class EndswithRule:
         return False
 
 
-def endswith(msg: Union[str, Tuple[str, ...]], ignorecase: bool = False) -> Rule:
+def endswith(msg: Union[str, tuple[str, ...]], ignorecase: bool = False) -> Rule:
     """匹配消息纯文本结尾。
 
     参数:
@@ -252,9 +255,9 @@ class FullmatchRule:
         ignorecase: 是否忽略大小写
     """
 
-    __slots__ = ("msg", "ignorecase")
+    __slots__ = ("ignorecase", "msg")
 
-    def __init__(self, msg: Tuple[str, ...], ignorecase: bool = False):
+    def __init__(self, msg: tuple[str, ...], ignorecase: bool = False):
         self.msg = tuple(map(str.casefold, msg) if ignorecase else msg)
         self.ignorecase = ignorecase
 
@@ -285,7 +288,7 @@ class FullmatchRule:
         return False
 
 
-def fullmatch(msg: Union[str, Tuple[str, ...]], ignorecase: bool = False) -> Rule:
+def fullmatch(msg: Union[str, tuple[str, ...]], ignorecase: bool = False) -> Rule:
     """完全匹配消息。
 
     参数:
@@ -356,7 +359,7 @@ class CommandRule:
 
     def __init__(
         self,
-        cmds: List[Tuple[str, ...]],
+        cmds: list[tuple[str, ...]],
         force_whitespace: Optional[Union[str, bool]] = None,
     ):
         self.cmds = tuple(cmds)
@@ -375,7 +378,7 @@ class CommandRule:
 
     async def __call__(
         self,
-        cmd: Optional[Tuple[str, ...]] = Command(),
+        cmd: Optional[tuple[str, ...]] = Command(),
         cmd_arg: Optional[Message] = CommandArg(),
         cmd_whitespace: Optional[str] = CommandWhitespace(),
     ) -> bool:
@@ -389,7 +392,7 @@ class CommandRule:
 
 
 def command(
-    *cmds: Union[str, Tuple[str, ...]],
+    *cmds: Union[str, tuple[str, ...]],
     force_whitespace: Optional[Union[str, bool]] = None,
 ) -> Rule:
     """匹配消息命令。
@@ -419,7 +422,7 @@ def command(
     config = get_driver().config
     command_start = config.command_start
     command_sep = config.command_sep
-    commands: List[Tuple[str, ...]] = []
+    commands: list[tuple[str, ...]] = []
     for command in cmds:
         if isinstance(command, str):
             command = (command,)
@@ -455,45 +458,38 @@ class ArgumentParser(ArgParser):
             self,
             args: Optional[Sequence[Union[str, MessageSegment]]] = None,
             namespace: None = None,
-        ) -> Tuple[Namespace, List[Union[str, MessageSegment]]]:
-            ...
+        ) -> tuple[Namespace, list[Union[str, MessageSegment]]]: ...
 
         @overload
         def parse_known_args(
             self, args: Optional[Sequence[Union[str, MessageSegment]]], namespace: T
-        ) -> Tuple[T, List[Union[str, MessageSegment]]]:
-            ...
+        ) -> tuple[T, list[Union[str, MessageSegment]]]: ...
 
         @overload
         def parse_known_args(
             self, *, namespace: T
-        ) -> Tuple[T, List[Union[str, MessageSegment]]]:
-            ...
+        ) -> tuple[T, list[Union[str, MessageSegment]]]: ...
 
-        def parse_known_args(
+        def parse_known_args(  # pyright: ignore[reportIncompatibleMethodOverride]
             self,
             args: Optional[Sequence[Union[str, MessageSegment]]] = None,
             namespace: Optional[T] = None,
-        ) -> Tuple[Union[Namespace, T], List[Union[str, MessageSegment]]]:
-            ...
+        ) -> tuple[Union[Namespace, T], list[Union[str, MessageSegment]]]: ...
 
     @overload
     def parse_args(
         self,
         args: Optional[Sequence[Union[str, MessageSegment]]] = None,
         namespace: None = None,
-    ) -> Namespace:
-        ...
+    ) -> Namespace: ...
 
     @overload
     def parse_args(
         self, args: Optional[Sequence[Union[str, MessageSegment]]], namespace: T
-    ) -> T:
-        ...
+    ) -> T: ...
 
     @overload
-    def parse_args(self, *, namespace: T) -> T:
-        ...
+    def parse_args(self, *, namespace: T) -> T: ...
 
     def parse_args(
         self,
@@ -508,7 +504,7 @@ class ArgumentParser(ArgParser):
 
     def _parse_optional(
         self, arg_string: Union[str, MessageSegment]
-    ) -> Optional[Tuple[Optional[Action], str, Optional[str]]]:
+    ) -> Optional[tuple[Optional[Action], str, Optional[str]]]:
         return (
             super()._parse_optional(arg_string) if isinstance(arg_string, str) else None
         )
@@ -535,7 +531,7 @@ class ShellCommandRule:
 
     __slots__ = ("cmds", "parser")
 
-    def __init__(self, cmds: List[Tuple[str, ...]], parser: Optional[ArgumentParser]):
+    def __init__(self, cmds: list[tuple[str, ...]], parser: Optional[ArgumentParser]):
         self.cmds = tuple(cmds)
         self.parser = parser
 
@@ -555,25 +551,35 @@ class ShellCommandRule:
     async def __call__(
         self,
         state: T_State,
-        cmd: Optional[Tuple[str, ...]] = Command(),
+        cmd: Optional[tuple[str, ...]] = Command(),
         msg: Optional[Message] = CommandArg(),
     ) -> bool:
         if cmd not in self.cmds or msg is None:
             return False
 
-        state[SHELL_ARGV] = list(
-            chain.from_iterable(
-                shlex.split(str(seg)) if cast(MessageSegment, seg).is_text() else (seg,)
-                for seg in msg
+        try:
+            state[SHELL_ARGV] = list(
+                chain.from_iterable(
+                    shlex.split(str(seg))
+                    if cast(MessageSegment, seg).is_text()
+                    else (seg,)
+                    for seg in msg
+                )
             )
-        )
+        except Exception as e:
+            # set SHELL_ARGV to none indicating shlex error
+            state[SHELL_ARGV] = None
+            # ensure SHELL_ARGS is set to ParserExit if parser is provided
+            if self.parser:
+                state[SHELL_ARGS] = ParserExit(status=2, message=str(e))
+            return True
 
         if self.parser:
             t = parser_message.set("")
             try:
                 args = self.parser.parse_args(state[SHELL_ARGV])
                 state[SHELL_ARGS] = args
-            except ArgumentError as e:  # pragma: py-gte-39
+            except ArgumentError as e:
                 state[SHELL_ARGS] = ParserExit(status=2, message=str(e))
             except ParserExit as e:
                 state[SHELL_ARGS] = e
@@ -583,7 +589,7 @@ class ShellCommandRule:
 
 
 def shell_command(
-    *cmds: Union[str, Tuple[str, ...]], parser: Optional[ArgumentParser] = None
+    *cmds: Union[str, tuple[str, ...]], parser: Optional[ArgumentParser] = None
 ) -> Rule:
     """匹配 `shell_like` 形式的消息命令。
 
@@ -599,7 +605,7 @@ def shell_command(
     通过 {ref}`nonebot.params.ShellCommandArgs` 获取解析后的参数字典
     （例: `{"arg": "arg", "h": True}`）。
 
-    :::warning 警告
+    :::caution 警告
     如果参数解析失败，则通过 {ref}`nonebot.params.ShellCommandArgs`
     获取的将是 {ref}`nonebot.exception.ParserExit` 异常。
     :::
@@ -631,7 +637,7 @@ def shell_command(
     config = get_driver().config
     command_start = config.command_start
     command_sep = config.command_sep
-    commands: List[Tuple[str, ...]] = []
+    commands: list[tuple[str, ...]] = []
     for command in cmds:
         if isinstance(command, str):
             command = (command,)
@@ -658,7 +664,7 @@ class RegexRule:
         flags: 正则表达式标记
     """
 
-    __slots__ = ("regex", "flags")
+    __slots__ = ("flags", "regex")
 
     def __init__(self, regex: str, flags: int = 0):
         self.regex = regex
@@ -742,7 +748,7 @@ class IsTypeRule:
 
     __slots__ = ("types",)
 
-    def __init__(self, *types: Type[Event]):
+    def __init__(self, *types: type[Event]):
         self.types = types
 
     def __repr__(self) -> str:
@@ -758,7 +764,7 @@ class IsTypeRule:
         return isinstance(event, self.types)
 
 
-def is_type(*types: Type[Event]) -> Rule:
+def is_type(*types: type[Event]) -> Rule:
     """匹配事件类型。
 
     参数:

@@ -1,19 +1,19 @@
 """
 FrontMatter:
+    mdx:
+        format: md
     sidebar_position: 1
     description: nonebot.dependencies.utils 模块
 """
 
 import inspect
-from typing import Any, Dict, TypeVar, Callable, ForwardRef
+from typing import Any, Callable, ForwardRef
 
 from loguru import logger
-from pydantic.fields import ModelField
-from pydantic.typing import evaluate_forwardref
 
+from nonebot.compat import ModelField
 from nonebot.exception import TypeMisMatch
-
-V = TypeVar("V")
+from nonebot.typing import evaluate_forwardref
 
 
 def get_typed_signature(call: Callable[..., Any]) -> inspect.Signature:
@@ -33,7 +33,7 @@ def get_typed_signature(call: Callable[..., Any]) -> inspect.Signature:
     return inspect.Signature(typed_params)
 
 
-def get_typed_annotation(param: inspect.Parameter, globalns: Dict[str, Any]) -> Any:
+def get_typed_annotation(param: inspect.Parameter, globalns: dict[str, Any]) -> Any:
     """获取参数的类型注解"""
 
     annotation = param.annotation
@@ -49,10 +49,10 @@ def get_typed_annotation(param: inspect.Parameter, globalns: Dict[str, Any]) -> 
     return annotation
 
 
-def check_field_type(field: ModelField, value: V) -> V:
+def check_field_type(field: ModelField, value: Any) -> Any:
     """检查字段类型是否匹配"""
 
-    _, errs_ = field.validate(value, {}, loc=())
-    if errs_:
+    try:
+        return field.validate_value(value)
+    except ValueError:
         raise TypeMisMatch(field, value)
-    return value
